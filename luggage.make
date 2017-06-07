@@ -65,6 +65,7 @@ PKG_DIST=${TITLE}_dist-${PACKAGE_VERSION}.pkg
 # their best to preserve the resource forks, but it isn't worth the aggravation
 # to fight with them.
 LUGGAGE_TMP=/tmp/the_luggage
+OUTPUT_D=.
 SCRATCH_D=${LUGGAGE_TMP}/${PACKAGE_NAME}
 
 SCRIPT_D=${SCRATCH_D}/scripts
@@ -204,6 +205,10 @@ enlprojdir: resourcedir
 scratchdir:
 	@sudo mkdir -p ${SCRATCH_D}
 
+outputdir:
+	@sudo mkdir -p ${OUTPUT_D}
+	@sudo chmod 775 ${OUTPUT_D}
+
 # user targets
 
 clean:
@@ -212,14 +217,15 @@ clean:
 superclean:
 	@sudo rm -fr ${LUGGAGE_TMP}
 
-dmg: scratchdir compile_package
+dmg: scratchdir outputdir compile_package
 	@echo "Wrapping ${PACKAGE_NAME}..."
 	@sudo hdiutil create -volname ${PACKAGE_NAME} \
 		-srcfolder ${PAYLOAD_D} \
 		-uid 99 -gid 99 \
 		-ov \
 		-format ${DMG_FORMAT} \
-		${DMG_NAME}
+		${SCRATCH_D}/${DMG_NAME}
+	sudo ${CP} ${SCRATCH_D}/${DMG_NAME} ${OUTPUT_D}/
 
 zip: scratchdir compile_package
 	@echo "Zipping ${PACKAGE_NAME}..."
@@ -234,7 +240,7 @@ modify_packageroot:
 
 prep_pkg: compile_package
 
-pkg: prep_pkg local_pkg
+pkg: prep_pkg
 
 pkg-dist: prep_pkg create_flatdist
 
@@ -271,6 +277,7 @@ compile_package_pm: payload .luggage.pkg.plist modify_packageroot
 		--resources ${RESOURCE_D} \
 		--version ${PACKAGE_VERSION} \
 		${PM_EXTRA_ARGS} --out ${PAYLOAD_D}/${PACKAGE_FILE}
+	sudo ${CP} ${PAYLOAD_D}/${PACKAGE_FILE} ${OUTPUT_D}/
 
 compile_package_pb: payload .luggage.pkg.component.plist kill_relocate modify_packageroot
 	@-sudo rm -fr ${PAYLOAD_D}/${PACKAGE_FILE}
@@ -283,6 +290,7 @@ compile_package_pb: payload .luggage.pkg.component.plist kill_relocate modify_pa
 		--version ${PACKAGE_VERSION} \
 		${PB_EXTRA_ARGS} \
 		${PAYLOAD_D}/${PACKAGE_FILE}
+	sudo ${CP} ${PAYLOAD_D}/${PACKAGE_FILE} ${OUTPUT_D}/
 
 create_flatdist:
 	@-sudo rm -fr ${PAYLOAD_D}/${PKG_DIST}
